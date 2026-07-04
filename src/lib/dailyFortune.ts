@@ -34,6 +34,10 @@ export type DailyFortuneReading = {
   relationHighlights: DailyRelation[]
   categoryReadings: DailyCategoryReading[]
   actionTips: string[]
+  timeTips: Array<{
+    label: '오전' | '오후' | '저녁'
+    text: string
+  }>
   caution: string
   basis: string
 }
@@ -240,16 +244,31 @@ export function buildDailyFortuneReading(chart: SajuChart, day: CalendarDay): Da
   const relationHighlights = findDailyRelations(chart.pillars, day.dayBranch)
   const elementTone = describeElementTone(chart, day.dayStemElement)
   const categoryReadings = buildCategoryReadings(chart, day, tenGod, branchTenGod, relationHighlights)
-  const averageScore = average(categoryReadings.map((category) => category.score))
+  const averageScore = adjustDailyAverageScore(
+    average(categoryReadings.map((category) => category.score)),
+    categoryReadings,
+    relationHighlights,
+    tenGod,
+  )
   const topPercent = scoreToTopPercent(averageScore)
   const strongestCategory = [...categoryReadings].sort((a, b) => b.score - a.score)[0]
   const weakestCategory = [...categoryReadings].sort((a, b) => a.score - b.score)[0]
   const caution = relationHighlights.some((relation) => relation.tone === 'tension')
     ? `${theme.caution} 특히 원국 지지와 긴장 관계가 있으니 일정과 말의 속도를 낮춰보세요.`
     : theme.caution
+  const headline = buildPersonalizedDailyHeadline({
+    baseHeadline: theme.headline,
+    tenGod,
+    branchTenGod,
+    averageScore,
+    strongestCategory,
+    weakestCategory,
+    relationHighlights,
+    elementTone,
+  })
   const narrative = buildDailyNarrative({
     title: `${day.date} ${day.dayGanji}일`,
-    headline: theme.headline,
+    headline,
     averageScore,
     topPercent,
     tenGod,
@@ -264,7 +283,7 @@ export function buildDailyFortuneReading(chart: SajuChart, day: CalendarDay): Da
   return {
     date: day.date,
     title: `${day.date} ${day.dayGanji}일`,
-    headline: theme.headline,
+    headline,
     narrative,
     toneVariants: buildDailyToneVariants({
       narrative,
@@ -288,9 +307,105 @@ export function buildDailyFortuneReading(chart: SajuChart, day: CalendarDay): Da
       ...theme.tips,
       `${day.dayStemElement} 기운은 ${elementThemes[day.dayStemElement]}에 초점을 맞추면 쓰기 쉽습니다.`,
     ],
+    timeTips: buildDailyTimeTips(strongestCategory, weakestCategory, tenGod, branchTenGod),
     caution,
     basis: `일진 ${day.dayGanji}, 일간 기준 천간 십성 ${tenGod}, 지지 십성 ${branchTenGod}, 일진 오행 ${day.dayStemElement}/${day.dayBranchElement}`,
   }
+}
+
+function adjustDailyAverageScore(
+  baseScore: number,
+  categoryReadings: DailyCategoryReading[],
+  relationHighlights: DailyRelation[],
+  tenGod: string,
+) {
+  const scores = categoryReadings.map((category) => category.score)
+  const spread = Math.max(...scores) - Math.min(...scores)
+  const relationDelta = relationHighlights.some((relation) => relation.tone === 'support')
+    ? 3
+    : relationHighlights.some((relation) => relation.tone === 'tension')
+      ? -4
+      : 0
+  const tenGodDelta: Record<string, number> = {
+    식신: 3,
+    편재: 3,
+    정관: 2,
+    정인: 1,
+    비견: 0,
+    정재: 0,
+    상관: -1,
+    겁재: -2,
+    편인: -2,
+    편관: -3,
+  }
+  const spreadDelta = spread >= 22 ? 2 : spread <= 10 ? -2 : 0
+
+  return clampScore(Math.round(baseScore + relationDelta + (tenGodDelta[tenGod] ?? 0) + spreadDelta))
+}
+
+function buildDailyTimeTips(
+  strongestCategory: DailyCategoryReading,
+  weakestCategory: DailyCategoryReading,
+  tenGod: string,
+  branchTenGod: string,
+): DailyFortuneReading['timeTips'] {
+  return [
+    {
+      label: '오전',
+      text: `${strongestCategory.category}과 관련된 중요한 일부터 먼저 배치하세요.`,
+    },
+    {
+      label: '오후',
+      text: `${tenGod}/${branchTenGod} 기운이 드러나기 쉬우니 말과 선택의 기준을 분명히 잡으세요.`,
+    },
+    {
+      label: '저녁',
+      text: `${weakestCategory.category}은 무리해서 끌고 가지 말고 정리와 회복 쪽으로 마무리하세요.`,
+    },
+  ]
+}
+
+function buildPersonalizedDailyHeadline({
+  baseHeadline,
+  tenGod,
+  branchTenGod,
+  averageScore,
+  strongestCategory,
+  weakestCategory,
+  relationHighlights,
+  elementTone,
+}: {
+  baseHeadline: string
+  tenGod: string
+  branchTenGod: string
+  averageScore: number
+  strongestCategory: DailyCategoryReading
+  weakestCategory: DailyCategoryReading
+  relationHighlights: DailyRelation[]
+  elementTone: string
+}) {
+  const scoreLead =
+    averageScore >= 70
+      ? '오늘은 흐름이 비교적 열려 있습니다.'
+      : averageScore >= 62
+        ? '오늘은 선택과 집중이 잘 맞는 날입니다.'
+        : averageScore >= 55
+          ? '오늘은 무리보다 정리가 먼저입니다.'
+          : '오늘은 속도를 낮추고 안정감을 챙기는 편이 좋습니다.'
+  const relationLead = relationHighlights.some((relation) => relation.tone === 'tension')
+    ? '관계나 일정의 마찰은 미리 줄여두세요.'
+    : relationHighlights.some((relation) => relation.tone === 'support')
+      ? '사람과 약속에서 도움 받을 여지가 있습니다.'
+      : ''
+  const categoryLead = `${strongestCategory.category}은 살리고 ${weakestCategory.category}은 점검하세요.`
+  const elementLead = elementTone.includes('이미 강한')
+    ? '기운을 더 밀기보다 균형을 잡는 쪽이 좋습니다.'
+    : elementTone.includes('무난하게')
+      ? '큰 변동보다 기본기를 쓰기 좋은 흐름입니다.'
+      : ''
+  const branchLead = branchTenGod !== '-' ? `${tenGod}/${branchTenGod} 흐름이 하루의 결을 만듭니다.` : baseHeadline
+
+  return [scoreLead, categoryLead, relationLead || elementLead || branchLead].filter(Boolean).join(' ')
 }
 
 export function buildPeriodFortuneReading(
@@ -620,16 +735,16 @@ function buildCategoryReadings(
     const hasSupportRelation = relationHighlights.some((relation) => relation.tone === 'support')
     const hasTensionRelation = relationHighlights.some((relation) => relation.tone === 'tension')
     const score = clampScore(
-      62 +
-        (profile.boostTenGods.includes(tenGod) ? 12 : 0) +
-        (profile.boostTenGods.includes(branchTenGod) ? 6 : 0) -
-        (profile.dragTenGods.includes(tenGod) ? 10 : 0) -
-        (profile.dragTenGods.includes(branchTenGod) ? 5 : 0) +
-        (day.dayStemElement === profile.element ? 6 : 0) +
-        (elementStatus === '부족' ? 5 : 0) -
-        (elementStatus === '과다' ? 4 : 0) +
-        (hasSupportRelation ? 4 : 0) -
-        (hasTensionRelation ? 6 : 0),
+      60 +
+        (profile.boostTenGods.includes(tenGod) ? 16 : 0) +
+        (profile.boostTenGods.includes(branchTenGod) ? 8 : 0) -
+        (profile.dragTenGods.includes(tenGod) ? 13 : 0) -
+        (profile.dragTenGods.includes(branchTenGod) ? 7 : 0) +
+        (day.dayStemElement === profile.element ? 8 : 0) +
+        (elementStatus === '부족' ? 7 : 0) -
+        (elementStatus === '과다' ? 7 : 0) +
+        (hasSupportRelation ? 6 : 0) -
+        (hasTensionRelation ? 9 : 0),
     )
 
     return {

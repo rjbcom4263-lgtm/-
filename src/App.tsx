@@ -16,6 +16,7 @@ import { calculateSajuChart, type BirthInput, type SajuChart } from './lib/sajuE
 import {
   buildDailyFortuneReading,
   buildPeriodFortuneReading,
+  type DailyCategoryReading,
   type DailyFortuneReading,
   type PeriodFortuneReading,
 } from './lib/dailyFortune'
@@ -371,6 +372,17 @@ function App() {
     }
   }, [form])
 
+  useEffect(() => {
+    const name = profileName.trim() || '나'
+    const viewLabel: Record<ResultView, string> = {
+      manse: '만세력',
+      reading: '사주 풀이',
+      daily: '오늘의 운세',
+    }
+
+    document.title = `${name} ${viewLabel[view]} | 사주팔자`
+  }, [profileName, view])
+
   const updateForm = <K extends keyof BirthInput>(key: K, value: BirthInput[K]) => {
     setForm((current) => ({ ...current, [key]: value }))
     setSaveStatus('')
@@ -517,6 +529,9 @@ function App() {
             <button className="secondary-tool-button" type="button" onClick={startNewProfile}>
               새 사람 입력
             </button>
+            <p className="privacy-hint">
+              저장 기능은 이 브라우저에만 보관됩니다. 공유 링크에는 이름과 출생 정보가 포함될 수 있습니다.
+            </p>
           </div>
 
           <div className="field-grid">
@@ -1124,31 +1139,36 @@ function SajuDailyFortune({
 
       <section className="daily-overview">
         <article>
-          <span>선택 날짜</span>
-          <strong>{dailyFortune.title}</strong>
-          <small>{dailyFortune.basis}</small>
+          <span>오늘 점수</span>
+          <strong>{dailyFortune.averageScore}점</strong>
+          <small>체감상 상위 {dailyFortune.topPercent}% 흐름</small>
         </article>
         <article>
-          <span>오늘의 십성</span>
-          <strong>{dailyFortune.tenGod}</strong>
-          <small>일간 기준 오늘 천간의 역할입니다.</small>
+          <span>밀어볼 운</span>
+          <strong>{getStrongestDailyCategory(dailyFortune).category}</strong>
+          <small>{getStrongestDailyCategory(dailyFortune).score}점 · 먼저 힘을 실을 영역</small>
         </article>
         <article>
-          <span>오늘의 지지</span>
-          <strong>{dailyFortune.branchTenGod}</strong>
-          <small>일간 기준 오늘 지지의 흐름입니다.</small>
+          <span>조심할 운</span>
+          <strong>{getWeakestDailyCategory(dailyFortune).category}</strong>
+          <small>{getWeakestDailyCategory(dailyFortune).score}점 · 무리하지 않을 영역</small>
         </article>
       </section>
 
       <section className="saju-section daily-section">
-        <SectionHeader title="일진 선택" description="날짜를 선택하면 아래 풀이가 바로 바뀝니다." />
-        <ManseCalendar
-          calendar={calendar}
-          selectedDate={selectedDate}
-          onSelectDate={onSelectDate}
-          onPrev={onPrev}
-          onNext={onNext}
-        />
+        <details className="daily-calendar-details">
+          <summary>
+            <span>날짜 바꾸기</span>
+            <small>{dailyFortune.title}</small>
+          </summary>
+          <ManseCalendar
+            calendar={calendar}
+            selectedDate={selectedDate}
+            onSelectDate={onSelectDate}
+            onPrev={onPrev}
+            onNext={onNext}
+          />
+        </details>
       </section>
 
       <section className="saju-section daily-section fortune-tabs-section">
@@ -1264,6 +1284,7 @@ function ManseCalendar({
 function DailyFortunePanel({ reading, relatedSigns }: { reading: DailyFortuneReading; relatedSigns: string[] }) {
   const strongestCategory = getStrongestDailyCategory(reading)
   const weakestCategory = getWeakestDailyCategory(reading)
+  const oneLineAdvice = buildDailyOneLineAdvice(reading, strongestCategory, weakestCategory)
 
   return (
     <article className="daily-fortune-panel">
@@ -1277,14 +1298,22 @@ function DailyFortunePanel({ reading, relatedSigns }: { reading: DailyFortuneRea
           <span>지지 {reading.branchTenGod}</span>
         </div>
       </div>
-      <p className="daily-headline">{reading.headline}</p>
-      <FortuneStory text={reading.narrative} relatedSigns={relatedSigns} />
-      <div className={`fortune-rank-card ${getScoreTone(reading.averageScore)}`}>
-        <span>나의 운 흐름</span>
-        <strong>상위 {reading.topPercent}%</strong>
-        <small>{reading.averageScore}점 · {reading.rankText}</small>
+
+      <div className={`daily-summary-card ${getScoreTone(reading.averageScore)}`}>
+        <div>
+          <span>오늘의 결론</span>
+          <strong>{reading.averageScore}점 · 상위 {reading.topPercent}%</strong>
+        </div>
+        <p>{reading.headline}</p>
+        <small>{oneLineAdvice}</small>
         <ScoreMeter score={reading.averageScore} />
       </div>
+
+      <details className="daily-detail-story">
+        <summary>자세한 흐름 보기</summary>
+        <FortuneStory text={reading.narrative} relatedSigns={relatedSigns} />
+      </details>
+
       <p className="analysis-note">{reading.elementTone}</p>
       <div className="fortune-brief">
         <div>
@@ -1297,6 +1326,14 @@ function DailyFortunePanel({ reading, relatedSigns }: { reading: DailyFortuneRea
           <strong>{weakestCategory.category}</strong>
           <small>{weakestCategory.score}점 · {weakestCategory.advice}</small>
         </div>
+      </div>
+      <div className="daily-time-grid">
+        {reading.timeTips.map((tip) => (
+          <section key={tip.label}>
+            <span>{tip.label}</span>
+            <p>{tip.text}</p>
+          </section>
+        ))}
       </div>
       <div className="daily-category-grid">
         {reading.categoryReadings.map((category) => (
@@ -1314,7 +1351,7 @@ function DailyFortunePanel({ reading, relatedSigns }: { reading: DailyFortuneRea
       </div>
       <div className="daily-fortune-grid">
         <section>
-          <h4>활용 포인트</h4>
+          <h4>오늘 바로 할 일</h4>
           <ul>
             {reading.actionTips.map((tip) => (
               <li key={tip}>{tip}</li>
@@ -1345,6 +1382,21 @@ function DailyFortunePanel({ reading, relatedSigns }: { reading: DailyFortuneRea
       <small className="daily-basis">{reading.basis}</small>
     </article>
   )
+}
+
+function buildDailyOneLineAdvice(
+  reading: DailyFortuneReading,
+  strongestCategory: DailyCategoryReading,
+  weakestCategory: DailyCategoryReading,
+) {
+  const scoreTone =
+    reading.averageScore >= 70
+      ? '밀어붙이기보다 좋은 흐름을 선별해 쓰면 좋습니다.'
+      : reading.averageScore >= 58
+        ? '무리한 확장보다 선택과 집중이 잘 맞습니다.'
+        : '속도를 낮추고 정리부터 하는 편이 좋습니다.'
+
+  return `${strongestCategory.category}은 활용하고, ${weakestCategory.category}은 한 번 더 점검하세요. ${scoreTone}`
 }
 
 function PeriodFortunePanel({ reading, relatedSigns }: { reading: PeriodFortuneReading; relatedSigns: string[] }) {
@@ -1733,15 +1785,15 @@ function SajuReading({
         <div className="notice-grid">
           <article>
             <strong>참고용 콘텐츠</strong>
-            <p>이 결과는 만세력 계산과 명리 해석 문장팩을 바탕으로 한 참고용 풀이입니다.</p>
+            <p>이 결과는 만세력 계산과 명리 해석 문장팩을 바탕으로 한 문화·오락 목적의 참고용 풀이입니다.</p>
           </article>
           <article>
             <strong>단정 금지</strong>
-            <p>건강, 투자, 결혼, 이혼, 진로를 확정적으로 판단하지 않습니다. 중요한 결정은 현실 자료와 전문가 조언을 함께 보세요.</p>
+            <p>건강, 투자, 결혼, 이혼, 진로를 확정적으로 판단하지 않습니다. 중요한 결정은 현실 자료와 전문가 상담을 우선하세요.</p>
           </article>
           <article>
             <strong>개인정보</strong>
-            <p>저장한 생년월일은 이 브라우저의 로컬 저장소에 보관됩니다. 공유 링크에는 입력한 출생 정보가 포함될 수 있습니다.</p>
+            <p>생년월일 저장값은 이 브라우저의 로컬 저장소에 남습니다. 공용 PC에서는 저장 후 삭제하거나 공유 링크 사용을 피하세요.</p>
           </article>
         </div>
       </section>

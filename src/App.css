@@ -275,6 +275,16 @@
   background: #f3f5ef;
 }
 
+.privacy-hint {
+  margin: 0;
+  border-top: 1px solid #e3ded2;
+  color: #6a4f27;
+  font-size: 11px;
+  font-weight: 750;
+  line-height: 1.55;
+  padding-top: 9px;
+}
+
 label {
   display: grid;
   gap: 6px;
@@ -758,6 +768,40 @@ select:focus {
 .fortune-tabs-section {
   display: grid;
   gap: 12px;
+}
+
+.daily-calendar-details {
+  padding: 0;
+}
+
+.daily-calendar-details > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 48px;
+  color: #20231d;
+  cursor: pointer;
+  font-weight: 900;
+  list-style: none;
+}
+
+.daily-calendar-details > summary::-webkit-details-marker {
+  display: none;
+}
+
+.daily-calendar-details > summary span {
+  font-size: 15px;
+}
+
+.daily-calendar-details > summary small {
+  color: #74786f;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.daily-calendar-details .calendar-shell {
+  margin-top: 12px;
 }
 
 .fortune-tabs {
@@ -1872,6 +1916,75 @@ h4 {
   line-height: 1.45;
 }
 
+.daily-summary-card {
+  display: grid;
+  gap: 10px;
+  border: 1px solid #d7cab4;
+  border-radius: 8px;
+  background: #4f483f;
+  color: #fffaf0;
+  padding: 16px;
+}
+
+.daily-summary-card div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.daily-summary-card span,
+.daily-summary-card small {
+  color: #e6dcc8;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.6;
+}
+
+.daily-summary-card strong {
+  color: #ffffff;
+  font-size: 24px;
+  line-height: 1;
+}
+
+.daily-summary-card p {
+  margin: 0;
+  color: #ffffff;
+  font-size: 17px;
+  font-weight: 900;
+  line-height: 1.55;
+}
+
+.daily-summary-card .score-meter {
+  background: rgba(255, 250, 240, 0.2);
+}
+
+.daily-summary-card .score-meter span {
+  background: #d8b36a;
+}
+
+.daily-detail-story {
+  border: 1px solid #e3ded2;
+  border-radius: 8px;
+  background: #fffdf8;
+  padding: 0;
+}
+
+.daily-detail-story summary {
+  min-height: 42px;
+  color: #4f483f;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 42px;
+  padding: 0 12px;
+}
+
+.daily-detail-story .fortune-story {
+  border-bottom: 0;
+  padding: 12px;
+}
+
 .fortune-story {
   display: grid;
   gap: 12px;
@@ -1954,6 +2067,35 @@ h4 {
 .fortune-brief strong {
   color: #171510;
   font-size: 18px;
+}
+
+.daily-time-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.daily-time-grid section {
+  display: grid;
+  gap: 6px;
+  border: 1px solid #ded5c4;
+  border-radius: 8px;
+  background: #f8f5ec;
+  padding: 12px;
+}
+
+.daily-time-grid span {
+  color: #6a4f27;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.daily-time-grid p {
+  margin: 0;
+  color: #343730;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.65;
 }
 
 .daily-category-grid {
@@ -2448,6 +2590,7 @@ h4 {
   .info-grid,
   .analysis-grid,
   .fortune-brief,
+  .daily-time-grid,
   .daily-category-grid,
   .daily-fortune-grid,
   .period-grid,
@@ -2568,6 +2711,12 @@ h4 {
 
   .daily-fortune-head {
     flex-direction: column;
+  }
+
+  .daily-summary-card div {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 5px;
   }
 
   .reading-title-row {
