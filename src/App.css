@@ -1963,6 +1963,25 @@ h4 {
   background: #d8b36a;
 }
 
+.daily-summary-card.score-high {
+  border-color: #c8d7b2;
+  background: #4e5d35;
+}
+
+.daily-summary-card.score-mid {
+  border-color: #d7cab4;
+  background: #4f483f;
+}
+
+.daily-summary-card.score-low {
+  border-color: #d8c9ad;
+  background: #6a5842;
+}
+
+.daily-summary-card.score-low .score-meter span {
+  background: #d9b879;
+}
+
 .daily-detail-story {
   border: 1px solid #e3ded2;
   border-radius: 8px;
@@ -2165,12 +2184,12 @@ h4 {
 }
 
 .score-low {
-  border-color: #e0c3bb;
-  background: #fff6f2;
+  border-color: #d9cfb9;
+  background: #fbf8ef;
 }
 
 .score-low .score-meter span {
-  background: #b86655;
+  background: #b18a55;
 }
 
 .daily-category-card p {
