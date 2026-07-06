@@ -39,6 +39,8 @@ const initialForm: BirthInput = {
 
 const savedBirthInputKey = 'saju.birthInput.v1'
 const savedProfilesKey = 'saju.birthProfiles.v1'
+const maxProfileNameLength = 30
+const maxSavedProfiles = 20
 
 type ChipDescription = {
   summary: string
@@ -228,9 +230,9 @@ function getInitialProfileName() {
     return '나'
   }
 
-  const name = new URLSearchParams(window.location.search).get('name')?.trim()
+  const name = normalizeProfileName(new URLSearchParams(window.location.search).get('name') ?? '', '나')
 
-  return name || '나'
+  return name
 }
 
 function getInitialProfiles(): BirthProfile[] {
@@ -266,7 +268,7 @@ function normalizeProfiles(value: unknown): BirthProfile[] {
 
     const profile = item as Partial<BirthProfile>
     const input = normalizeBirthInput(profile.input ?? null)
-    const name = typeof profile.name === 'string' && profile.name.trim() ? profile.name.trim() : '이름 없음'
+    const name = normalizeProfileName(profile.name, '이름 없음')
 
     return input
       ? [
@@ -277,11 +279,22 @@ function normalizeProfiles(value: unknown): BirthProfile[] {
           },
         ]
       : []
-  })
+  }).slice(0, maxSavedProfiles)
 }
 
 function createProfileId() {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`
+}
+
+function normalizeProfileName(value: unknown, fallback = '') {
+  const text = typeof value === 'string' ? value : ''
+  const cleaned = text
+    .replace(/[\u0000-\u001f\u007f<>]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, maxProfileNameLength)
+
+  return cleaned || fallback
 }
 
 function buildShareUrl(input: BirthInput, name = '', view: ResultView = 'manse') {
@@ -398,15 +411,16 @@ function App() {
   }
 
   const saveBirthInput = () => {
-    const name = profileName.trim() || '이름 없음'
+    const name = normalizeProfileName(profileName, '이름 없음')
     const nextProfile = {
       id: selectedProfileId || createProfileId(),
       name,
       input: form,
     }
-    const nextProfiles = selectedProfileId
+    const nextProfiles = (selectedProfileId
       ? profiles.map((profile) => (profile.id === selectedProfileId ? nextProfile : profile))
       : [...profiles, nextProfile]
+    ).slice(-maxSavedProfiles)
 
     setProfiles(nextProfiles)
     setSelectedProfileId(nextProfile.id)
@@ -460,16 +474,31 @@ function App() {
   }
 
   const shareBirthInput = async () => {
-    const shareUrl = buildShareUrl(form, profileName, view)
+    const shareUrl = buildShareUrl(form, '', view)
 
     try {
       await navigator.clipboard.writeText(shareUrl)
-      setSaveStatus('공유 링크를 클립보드에 복사했습니다.')
+      setSaveStatus('이름을 제외한 공유 링크를 클립보드에 복사했습니다.')
     } catch {
       window.history.replaceState(null, '', shareUrl)
-      setSaveStatus('주소창에 공유 링크를 반영했습니다.')
+      setSaveStatus('주소창에 이름을 제외한 공유 링크를 반영했습니다.')
     }
     setShareUrlPreview(shareUrl)
+  }
+
+  const clearSavedProfiles = () => {
+    const ok = window.confirm('이 브라우저에 저장된 사주 정보를 모두 삭제할까요?')
+
+    if (!ok) {
+      return
+    }
+
+    window.localStorage.removeItem(savedProfilesKey)
+    window.localStorage.removeItem(savedBirthInputKey)
+    setProfiles([])
+    setSelectedProfileId('')
+    setSaveStatus('이 브라우저에 저장된 사주 정보를 모두 삭제했습니다.')
+    setShareUrlPreview('')
   }
 
   return (
@@ -510,7 +539,7 @@ function App() {
                 value={profileName}
                 placeholder="예: 나, 엄마, 친구"
                 onChange={(event) => {
-                  setProfileName(event.target.value)
+                  setProfileName(normalizeProfileName(event.target.value))
                   setSaveStatus('')
                 }}
               />
@@ -530,7 +559,7 @@ function App() {
               새 사람 입력
             </button>
             <p className="privacy-hint">
-              저장 기능은 이 브라우저에만 보관됩니다. 공유 링크에는 이름과 출생 정보가 포함될 수 있습니다.
+              저장 기능은 이 브라우저에만 보관됩니다. 공유 링크에는 출생 정보가 포함되며 이름은 기본 제외됩니다.
             </p>
           </div>
 
@@ -635,7 +664,7 @@ function App() {
             </button>
             <button type="button" onClick={shareBirthInput}>
               <Share2 size={16} />
-              <span>공유 링크</span>
+              <span>이름 제외 공유</span>
             </button>
           </div>
           {saveStatus ? <p className="save-status">{saveStatus}</p> : null}
@@ -668,6 +697,9 @@ function App() {
                   </button>
                 </article>
               ))}
+              <button className="clear-profile-button" type="button" onClick={clearSavedProfiles}>
+                저장정보 전체 삭제
+              </button>
             </section>
           ) : null}
         </form>
@@ -681,7 +713,7 @@ function App() {
           ) : (
             <SajuResult
               chart={result.chart}
-              profileName={profileName.trim() || '이름 없음'}
+              profileName={normalizeProfileName(profileName, '이름 없음')}
               view={view}
               onViewChange={setView}
               onShare={shareBirthInput}

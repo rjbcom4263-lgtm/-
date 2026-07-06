@@ -527,6 +527,22 @@ select:focus {
   background: #f3f5ef;
 }
 
+.clear-profile-button {
+  min-height: 36px;
+  border: 1px solid #d9cfb9;
+  border-radius: 8px;
+  background: #fbf8ef;
+  color: #6a5842;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.clear-profile-button:hover {
+  background: #f3ede0;
+}
+
 .standard-badges {
   display: flex;
   flex-wrap: wrap;

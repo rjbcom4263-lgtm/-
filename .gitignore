@@ -17,6 +17,14 @@ reference-posteller-*
 Hermes_*
 *.lnk
 
+# Secrets and service account keys
+.env*
+!.env.example
+*service-account*.json
+*firebase-adminsdk*.json
+*private-key*.json
+*secret*.json
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
